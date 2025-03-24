@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card Details</title>
+    <style>
+        #loading { display: none; }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading...</div>
+    <div id="cardDetails"></div>
+    <script>
+        function getCardIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('cardId');
+        }
+
+        function updateCardDetails() {
+            document.getElementById('loading').style.display = 'block'; // Show loading
+
+            const cardId = getCardIdFromUrl();
+            if (!cardId) {
+                document.getElementById('cardDetails').textContent = 'Card ID not provided.';
+                document.getElementById('loading').style.display = 'none'; // Hide loading
+                return;
+            }
+
+            const sheetUrl = 'https://script.google.com/macros/s/AKfycbwLLoJPYpxZjCj4HuSt1N_93qgWNVYZS5FcFfhsv1yb-tFx1ZC-bFXnd2kXqBja8LqJ/exec';
+
+            fetch(sheetUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const card = data.find(item => item['Card Number:'] === cardId);
+                    if (card) {
+                        const purchases = card['Purchases:'].split(/[\n,]+/); // Split by newlines or commas
+                        let purchasesList = '<ul>';
+                        purchases.forEach(purchase => {
+                            purchasesList += `<li>${purchase.trim()}</li>`; // Trim whitespace
+                        });
+                        purchasesList += '</ul>';
+
+                        document.getElementById('cardDetails').innerHTML = `
+                            Card Number: ${card['Card Number:']}<br>
+                            Card Balance: ${card['Card Balance:']}<br>
+                            Name on card: ${card['Name on card:']}<br>
+                            Type: ${card['Type:']}<br>
+                            Purchases: ${purchasesList}
+                            <button onclick="window.location.href='https://docs.google.com/forms/d/e/1FAIpQLScCV57H61VSOvd282C6YjE4dXThj382yFQN5r69MAYuLsZH5w/viewform?usp=header'">Report Fraud</button>
+                        `;
+                    } else {
+                        document.getElementById('cardDetails').textContent = 'Card not found.';
+                    }
+                    document.getElementById('loading').style.display = 'none'; // Hide loading
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    document.getElementById('cardDetails').textContent = 'Error loading card details.';
+                    document.getElementById('loading').style.display = 'none'; // Hide loading
+                });
+        }
+
+        updateCardDetails(); // Initial update
+        setInterval(updateCardDetails, 2000); // Update every 2 seconds
+    </script>
+</body>
+</html>
